@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: tasks
+    description: Student task operations
 paths:
   /healthz:
     get:
@@ -24,7 +26,140 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List the signed-in user's tasks
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /tasks/stats:
+    get:
+      operationId: getTaskStats
+      tags: [tasks]
+      summary: Get task summary statistics
+      responses:
+        "200":
+          description: Task statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskStats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /tasks/{taskId}:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Delete a task
+      responses:
+        "204":
+          description: Task deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /tasks/{taskId}/complete:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    patch:
+      operationId: completeTask
+      tags: [tasks]
+      summary: Complete a task and optionally create its next recurrence
+      responses:
+        "200":
+          description: Completed task and next occurrence when recurring
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskCompletionResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
+  parameters:
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +168,113 @@ components:
           type: string
       required:
         - status
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        category:
+          type: string
+        dueDate:
+          type: string
+          format: date
+        priority:
+          type: string
+          enum: [Low, Medium, High]
+        recurrence:
+          type: string
+          enum: [None, Daily, Weekly, Monthly]
+        isCompleted:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - category
+        - dueDate
+        - priority
+        - recurrence
+        - isCompleted
+        - createdAt
+    TaskInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          minLength: 1
+        dueDate:
+          type: string
+          format: date
+        priority:
+          type: string
+          enum: [Low, Medium, High]
+        recurrence:
+          type: string
+          enum: [None, Daily, Weekly, Monthly]
+      required:
+        - title
+        - category
+        - dueDate
+        - priority
+        - recurrence
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          minLength: 1
+        dueDate:
+          type: string
+          format: date
+        priority:
+          type: string
+          enum: [Low, Medium, High]
+        recurrence:
+          type: string
+          enum: [None, Daily, Weekly, Monthly]
+    TaskStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        dueSoon:
+          type: integer
+        completed:
+          type: integer
+        completionRate:
+          type: integer
+      required:
+        - total
+        - dueSoon
+        - completed
+        - completionRate
+    TaskCompletionResult:
+      type: object
+      properties:
+        task:
+          $ref: "#/components/schemas/Task"
+        nextTask:
+          anyOf:
+            - $ref: "#/components/schemas/Task"
+            - type: "null"
+      required:
+        - task
+        - nextTask
 

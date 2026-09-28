@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "CampusTrack"
+description = "A student planner for assignments, exams, campus events, priorities, recurring tasks, and personal deadlines."
+version = "1.0.0"
+id = "artifacts/campus-track"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22803
+
+[services.development]
+run = "pnpm --filter @workspace/campus-track run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/campus-track", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/campus-track/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22803"
+BASE_PATH = "/"
