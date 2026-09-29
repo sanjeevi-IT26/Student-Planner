@@ -1,0 +1,1 @@
+- [OpenAPI calendar dates](openapi-calendar-dates.md) — date-only task fields need string handling at the client boundary and calendar-safe conversion on the server.
