@@ -9,6 +9,14 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary API root health check
+ */
+export const ApiRootHealthCheckResponse = zod.object({
+  "status": zod.string()
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */

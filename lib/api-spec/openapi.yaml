@@ -13,6 +13,18 @@ tags:
   - name: tasks
     description: Student task operations
 paths:
+  /:
+    get:
+      operationId: apiRootHealthCheck
+      tags: [health]
+      summary: API root health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
   /healthz:
     get:
       operationId: healthCheck
