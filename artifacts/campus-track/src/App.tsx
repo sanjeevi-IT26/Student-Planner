@@ -40,6 +40,13 @@ import {
 import type { Task } from "@workspace/api-client-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import NotFound from "@/pages/not-found";
+import {
+  formatTaskDate,
+  isTaskDueSoon,
+  isTaskDueToday,
+  localDateInputValue,
+  taskDateInputValue,
+} from "@/lib/task-date";
 import { Redirect, Route, Router as WouterRouter, Switch, useLocation } from "wouter";
 
 const queryClient = new QueryClient();
@@ -110,27 +117,6 @@ type TaskDraft = {
 const categories = ["Coursework", "Personal", "Clubs", "Wellbeing"];
 const priorities: Priority[] = ["Low", "Medium", "High"];
 const recurrences: Recurrence[] = ["None", "Daily", "Weekly", "Monthly"];
-
-function displayDate(value: string) {
-  return new Intl.DateTimeFormat("en", { weekday: "short", month: "short", day: "numeric" }).format(
-    new Date(`${value}T12:00:00`),
-  );
-}
-
-function isToday(value: string) {
-  const date = new Date(`${value}T12:00:00`);
-  const now = new Date();
-  return date.toDateString() === now.toDateString();
-}
-
-function isSoon(value: string) {
-  const date = new Date(`${value}T12:00:00`);
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const limit = new Date(now);
-  limit.setDate(limit.getDate() + 7);
-  return date >= now && date <= limit;
-}
 
 function HomeRedirect() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -237,7 +223,7 @@ function DashboardShell() {
   });
   const tasks = tasksQuery.data ?? [];
   const visibleTasks = useMemo(() => tasks.filter((task) => {
-    const matchesFilter = activeFilter === "All" || (activeFilter === "Today" && isToday(task.dueDate)) || (activeFilter === "Completed" && task.isCompleted);
+    const matchesFilter = activeFilter === "All" || (activeFilter === "Today" && isTaskDueToday(task.dueDate)) || (activeFilter === "Completed" && task.isCompleted);
     const matchesSearch = `${task.title} ${task.category}`.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   }), [activeFilter, search, tasks]);
@@ -304,14 +290,45 @@ function StatCard({ label, value, icon, tone }: { label: string; value?: number 
 }
 
 function TaskRow({ task, onComplete, onEdit, onDelete, isCompleting, isDeleting }: { task: Task; onComplete: () => void; onEdit: () => void; onDelete: () => void; isCompleting: boolean; isDeleting: boolean }) {
-  return <article className={`task-row ${task.isCompleted ? "task-done" : ""}`}><button className={`task-check ${task.isCompleted ? "checked" : ""}`} onClick={onComplete} disabled={isCompleting} aria-label={task.isCompleted ? "Completed" : "Mark complete"}>{task.isCompleted && <Check size={15} />}</button><div className="task-content"><div className="task-title-line"><h3>{task.title}</h3>{task.recurrence !== "None" && <span className="recurrence-chip"><Repeat2 size={12} /> {task.recurrence}</span>}</div><div className="task-details"><span className={`category-dot category-${task.category.toLowerCase()}`} />{task.category}<span className="detail-separator" /><CalendarDays size={13} />{isToday(task.dueDate) ? "Today" : displayDate(task.dueDate)}</div></div><span className={`priority-badge priority-${task.priority.toLowerCase()}`}>{task.priority}</span><div className="task-actions"><button onClick={onEdit} title="Edit task"><Pencil size={15} /></button><button onClick={onDelete} title="Delete task" disabled={isDeleting}><Trash2 size={15} /></button></div></article>;
+  return (
+    <article className={`task-row ${task.isCompleted ? "task-done" : ""}`}>
+      <button
+        className={`task-check ${task.isCompleted ? "checked" : ""}`}
+        onClick={onComplete}
+        disabled={isCompleting}
+        aria-label={task.isCompleted ? "Completed" : "Mark complete"}
+      >
+        {task.isCompleted && <Check size={15} />}
+      </button>
+      <div className="task-content">
+        <div className="task-title-line">
+          <h3>{task.title}</h3>
+          {task.recurrence !== "None" && (
+            <span className="recurrence-chip"><Repeat2 size={12} /> {task.recurrence}</span>
+          )}
+        </div>
+        <div className="task-details">
+          <span className={`category-dot category-${task.category.toLowerCase()}`} />
+          {task.category}
+          <span className="detail-separator" />
+          <CalendarDays size={13} />
+          {isTaskDueToday(task.dueDate) ? "Today" : formatTaskDate(task.dueDate)}
+        </div>
+      </div>
+      <span className={`priority-badge priority-${task.priority.toLowerCase()}`}>{task.priority}</span>
+      <div className="task-actions">
+        <button onClick={onEdit} title="Edit task"><Pencil size={15} /></button>
+        <button onClick={onDelete} title="Delete task" disabled={isDeleting}><Trash2 size={15} /></button>
+      </div>
+    </article>
+  );
 }
 
 function TaskModal({ task, onClose }: { task: Task | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const createMutation = useCreateTask({ mutation: { onSuccess: () => { void queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() }); void queryClient.invalidateQueries({ queryKey: getGetTaskStatsQueryKey() }); onClose(); } } });
   const updateMutation = useUpdateTask({ mutation: { onSuccess: () => { void queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() }); void queryClient.invalidateQueries({ queryKey: getGetTaskStatsQueryKey() }); onClose(); } } });
-  const [draft, setDraft] = useState<TaskDraft>({ title: task?.title || "", category: task?.category || "Coursework", dueDate: task?.dueDate || new Date().toISOString().slice(0, 10), priority: task?.priority || "Medium", recurrence: task?.recurrence || "None" });
+  const [draft, setDraft] = useState<TaskDraft>({ title: task?.title || "", category: task?.category || "Coursework", dueDate: taskDateInputValue(task?.dueDate) || localDateInputValue(), priority: task?.priority || "Medium", recurrence: task?.recurrence || "None" });
   const titleRef = useRef<HTMLInputElement>(null);
   const saving = createMutation.isPending || updateMutation.isPending;
   useEffect(() => { titleRef.current?.focus(); }, []);
