@@ -26,6 +26,256 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Get the signed-in user's CampusTrack profile
+ */
+export const GetCurrentUserResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.string().email(),
+  "displayName": zod.string(),
+  "role": zod.enum(['student', 'faculty'])
+})
+
+
+/**
+ * @summary List faculty accounts
+ */
+export const ListFacultyResponseItem = zod.object({
+  "id": zod.string(),
+  "email": zod.string().email(),
+  "displayName": zod.string(),
+  "role": zod.enum(['student', 'faculty'])
+})
+export const ListFacultyResponse = zod.array(ListFacultyResponseItem)
+
+
+/**
+ * @summary Promote an existing account to faculty
+ */
+export const AddFacultyBody = zod.object({
+  "email": zod.string().email()
+})
+
+export const AddFacultyResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.string().email(),
+  "displayName": zod.string(),
+  "role": zod.enum(['student', 'faculty'])
+})
+
+
+/**
+ * @summary List groups available to the signed-in user
+ */
+export const ListGroupsResponseItem = zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "joinCode": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "memberCount": zod.number().int(),
+  "accessRole": zod.enum(['faculty', 'admin', 'member'])
+})
+export const ListGroupsResponse = zod.array(ListGroupsResponseItem)
+
+
+/**
+ * @summary Create a faculty group
+ */
+export const createGroupBodyNameMax = 100;
+
+
+
+export const CreateGroupBody = zod.object({
+  "name": zod.string().min(1).max(createGroupBodyNameMax)
+})
+
+export const CreateGroupResponse = zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "joinCode": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "memberCount": zod.number().int(),
+  "accessRole": zod.enum(['faculty', 'admin', 'member'])
+})
+
+
+/**
+ * @summary Join a group with its invitation code
+ */
+export const joinGroupBodyCodeMin = 4;
+export const joinGroupBodyCodeMax = 24;
+
+
+
+export const JoinGroupBody = zod.object({
+  "code": zod.string().min(joinGroupBodyCodeMin).max(joinGroupBodyCodeMax)
+})
+
+export const JoinGroupResponse = zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "joinCode": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "memberCount": zod.number().int(),
+  "accessRole": zod.enum(['faculty', 'admin', 'member'])
+})
+
+
+/**
+ * @summary List students in a group
+ */
+
+
+
+export const ListGroupMembersParams = zod.object({
+  "groupId": zod.coerce.number().int().min(1)
+})
+
+export const ListGroupMembersResponseItem = zod.object({
+  "userId": zod.string(),
+  "email": zod.string().email(),
+  "displayName": zod.string(),
+  "role": zod.enum(['member', 'admin']),
+  "joinedAt": zod.coerce.date()
+})
+export const ListGroupMembersResponse = zod.array(ListGroupMembersResponseItem)
+
+
+/**
+ * @summary Make a student a group administrator or member
+ */
+
+
+
+
+export const UpdateGroupMemberRoleParams = zod.object({
+  "groupId": zod.coerce.number().int().min(1),
+  "userId": zod.coerce.string().min(1)
+})
+
+export const UpdateGroupMemberRoleBody = zod.object({
+  "role": zod.enum(['member', 'admin'])
+})
+
+export const UpdateGroupMemberRoleResponse = zod.object({
+  "userId": zod.string(),
+  "email": zod.string().email(),
+  "displayName": zod.string(),
+  "role": zod.enum(['member', 'admin']),
+  "joinedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Assign a task to a group or selected students
+ */
+
+
+
+export const CreateGroupAssignmentParams = zod.object({
+  "groupId": zod.coerce.number().int().min(1)
+})
+
+export const createGroupAssignmentBodyTitleMax = 200;
+
+export const createGroupAssignmentBodyCategoryMax = 100;
+
+
+export const createGroupAssignmentBodyStudentIdsMax = 250;
+
+
+
+export const CreateGroupAssignmentBody = zod.object({
+  "title": zod.string().min(1).max(createGroupAssignmentBodyTitleMax),
+  "category": zod.string().min(1).max(createGroupAssignmentBodyCategoryMax),
+  "dueDate": zod.coerce.date(),
+  "priority": zod.enum(['Low', 'Medium', 'High']),
+  "studentIds": zod.array(zod.string().min(1)).max(createGroupAssignmentBodyStudentIdsMax).optional()
+})
+
+export const CreateGroupAssignmentResponse = zod.object({
+  "id": zod.number().int(),
+  "groupId": zod.number().int(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "dueDate": zod.coerce.date(),
+  "priority": zod.enum(['Low', 'Medium', 'High']),
+  "createdAt": zod.coerce.date(),
+  "studentCount": zod.number().int()
+})
+
+
+/**
+ * @summary View assignment completion status for a group
+ */
+
+
+
+export const GetGroupReportParams = zod.object({
+  "groupId": zod.coerce.number().int().min(1)
+})
+
+export const GetGroupReportResponseItem = zod.object({
+  "assignmentId": zod.number().int(),
+  "assignmentTitle": zod.string(),
+  "groupId": zod.number().int(),
+  "dueDate": zod.coerce.date(),
+  "priority": zod.enum(['Low', 'Medium', 'High']),
+  "userId": zod.string(),
+  "studentName": zod.string(),
+  "studentEmail": zod.string().email(),
+  "isCompleted": zod.boolean(),
+  "completedAt": zod.coerce.date().nullable(),
+  "pointsAwarded": zod.number().int()
+})
+export const GetGroupReportResponse = zod.array(GetGroupReportResponseItem)
+
+
+/**
+ * @summary Get the signed-in user's points and point history
+ */
+export const GetMyPointsResponse = zod.object({
+  "total": zod.number().int(),
+  "entries": zod.array(zod.object({
+  "id": zod.number().int(),
+  "points": zod.number().int(),
+  "source": zod.enum(['task_completion', 'completion_reversal', 'faculty_adjustment']),
+  "reason": zod.string(),
+  "taskId": zod.number().int().nullable(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Award or deduct points for a student in a group
+ */
+
+
+export const awardPointsBodyPointsMin = -1000;
+export const awardPointsBodyPointsMax = 1000;
+
+export const awardPointsBodyReasonMax = 300;
+
+
+
+export const AwardPointsBody = zod.object({
+  "groupId": zod.number().int().min(1),
+  "userId": zod.string().min(1),
+  "points": zod.number().int().min(awardPointsBodyPointsMin).max(awardPointsBodyPointsMax),
+  "reason": zod.string().min(1).max(awardPointsBodyReasonMax)
+})
+
+export const AwardPointsResponse = zod.object({
+  "id": zod.number().int(),
+  "points": zod.number().int(),
+  "source": zod.enum(['task_completion', 'completion_reversal', 'faculty_adjustment']),
+  "reason": zod.string(),
+  "taskId": zod.number().int().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List the signed-in user's tasks
  */
 export const ListTasksResponseItem = zod.object({
@@ -36,6 +286,9 @@ export const ListTasksResponseItem = zod.object({
   "priority": zod.enum(['Low', 'Medium', 'High']),
   "recurrence": zod.enum(['None', 'Daily', 'Weekly', 'Monthly']),
   "isCompleted": zod.boolean(),
+  "assignmentId": zod.number().int().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "pointsAwarded": zod.number().int(),
   "createdAt": zod.coerce.date()
 })
 export const ListTasksResponse = zod.array(ListTasksResponseItem)
@@ -64,6 +317,9 @@ export const CreateTaskResponse = zod.object({
   "priority": zod.enum(['Low', 'Medium', 'High']),
   "recurrence": zod.enum(['None', 'Daily', 'Weekly', 'Monthly']),
   "isCompleted": zod.boolean(),
+  "assignmentId": zod.number().int().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "pointsAwarded": zod.number().int(),
   "createdAt": zod.coerce.date()
 })
 
@@ -109,6 +365,9 @@ export const UpdateTaskResponse = zod.object({
   "priority": zod.enum(['Low', 'Medium', 'High']),
   "recurrence": zod.enum(['None', 'Daily', 'Weekly', 'Monthly']),
   "isCompleted": zod.boolean(),
+  "assignmentId": zod.number().int().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "pointsAwarded": zod.number().int(),
   "createdAt": zod.coerce.date()
 })
 
@@ -145,6 +404,9 @@ export const CompleteTaskResponse = zod.object({
   "priority": zod.enum(['Low', 'Medium', 'High']),
   "recurrence": zod.enum(['None', 'Daily', 'Weekly', 'Monthly']),
   "isCompleted": zod.boolean(),
+  "assignmentId": zod.number().int().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "pointsAwarded": zod.number().int(),
   "createdAt": zod.coerce.date()
 }),
   "nextTask": zod.union([zod.object({
@@ -155,8 +417,40 @@ export const CompleteTaskResponse = zod.object({
   "priority": zod.enum(['Low', 'Medium', 'High']),
   "recurrence": zod.enum(['None', 'Daily', 'Weekly', 'Monthly']),
   "isCompleted": zod.boolean(),
+  "assignmentId": zod.number().int().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "pointsAwarded": zod.number().int(),
   "createdAt": zod.coerce.date()
 }),zod.null()])
+})
+
+
+/**
+ * @summary Report whether a task is finished
+ */
+
+
+
+export const UpdateTaskStatusParams = zod.object({
+  "taskId": zod.coerce.number().int().min(1)
+})
+
+export const UpdateTaskStatusBody = zod.object({
+  "isCompleted": zod.boolean()
+})
+
+export const UpdateTaskStatusResponse = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "dueDate": zod.coerce.date(),
+  "priority": zod.enum(['Low', 'Medium', 'High']),
+  "recurrence": zod.enum(['None', 'Daily', 'Weekly', 'Monthly']),
+  "isCompleted": zod.boolean(),
+  "assignmentId": zod.number().int().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "pointsAwarded": zod.number().int(),
+  "createdAt": zod.coerce.date()
 })
 
 

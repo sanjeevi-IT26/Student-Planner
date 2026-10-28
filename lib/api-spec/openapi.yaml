@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: campus
+    description: Student, faculty, group, and points operations
   - name: tasks
     description: Student task operations
 paths:
@@ -38,6 +40,274 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /me:
+    get:
+      operationId: getCurrentUser
+      tags: [campus]
+      summary: Get the signed-in user's CampusTrack profile
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /faculty:
+    get:
+      operationId: listFaculty
+      tags: [campus]
+      summary: List faculty accounts
+      responses:
+        "200":
+          description: Faculty users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: addFaculty
+      tags: [campus]
+      summary: Promote an existing account to faculty
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FacultyInput"
+      responses:
+        "200":
+          description: Faculty account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /groups:
+    get:
+      operationId: listGroups
+      tags: [campus]
+      summary: List groups available to the signed-in user
+      responses:
+        "200":
+          description: Groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GroupSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createGroup
+      tags: [campus]
+      summary: Create a faculty group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupInput"
+      responses:
+        "201":
+          description: Created group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /groups/join:
+    post:
+      operationId: joinGroup
+      tags: [campus]
+      summary: Join a group with its invitation code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupJoinInput"
+      responses:
+        "200":
+          description: Joined group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /groups/{groupId}/members:
+    parameters:
+      - $ref: "#/components/parameters/GroupId"
+    get:
+      operationId: listGroupMembers
+      tags: [campus]
+      summary: List students in a group
+      responses:
+        "200":
+          description: Group members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GroupMember"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /groups/{groupId}/members/{userId}/role:
+    parameters:
+      - $ref: "#/components/parameters/GroupId"
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+    patch:
+      operationId: updateGroupMemberRole
+      tags: [campus]
+      summary: Make a student a group administrator or member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberRoleUpdate"
+      responses:
+        "200":
+          description: Updated group member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupMember"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /groups/{groupId}/assignments:
+    parameters:
+      - $ref: "#/components/parameters/GroupId"
+    post:
+      operationId: createGroupAssignment
+      tags: [campus]
+      summary: Assign a task to a group or selected students
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupAssignmentInput"
+      responses:
+        "201":
+          description: Created group assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupAssignment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /groups/{groupId}/report:
+    parameters:
+      - $ref: "#/components/parameters/GroupId"
+    get:
+      operationId: getGroupReport
+      tags: [campus]
+      summary: View assignment completion status for a group
+      responses:
+        "200":
+          description: Assignment report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GroupReportEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /points:
+    get:
+      operationId: getMyPoints
+      tags: [campus]
+      summary: Get the signed-in user's points and point history
+      responses:
+        "200":
+          description: Points summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointsSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /points/award:
+    post:
+      operationId: awardPoints
+      tags: [campus]
+      summary: Award or deduct points for a student in a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PointAwardInput"
+      responses:
+        "201":
+          description: Point transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /tasks:
     get:
       operationId: listTasks
@@ -113,6 +383,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
@@ -144,10 +416,43 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+  /tasks/{taskId}/status:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    patch:
+      operationId: updateTaskStatus
+      tags: [tasks]
+      summary: Report whether a task is finished
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskStatusInput"
+      responses:
+        "200":
+          description: Updated task status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
   parameters:
     TaskId:
       name: taskId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    GroupId:
+      name: groupId
       in: path
       required: true
       schema:
@@ -172,6 +477,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: The signed-in user does not have permission
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   schemas:
     HealthStatus:
       type: object
@@ -187,6 +498,215 @@ components:
           type: string
       required:
         - error
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [student, faculty]
+      required: [id, email, displayName, role]
+    FacultyInput:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
+    GroupInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required: [name]
+    GroupJoinInput:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 4
+          maxLength: 24
+      required: [code]
+    GroupSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        joinCode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        memberCount:
+          type: integer
+        accessRole:
+          type: string
+          enum: [faculty, admin, member]
+      required: [id, name, joinCode, createdAt, memberCount, accessRole]
+    GroupMember:
+      type: object
+      properties:
+        userId:
+          type: string
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [member, admin]
+        joinedAt:
+          type: string
+          format: date-time
+      required: [userId, email, displayName, role, joinedAt]
+    MemberRoleUpdate:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [member, admin]
+      required: [role]
+    GroupAssignmentInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        category:
+          type: string
+          minLength: 1
+          maxLength: 100
+        dueDate:
+          type: string
+          format: date
+        priority:
+          type: string
+          enum: [Low, Medium, High]
+        studentIds:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          uniqueItems: true
+          maxItems: 250
+      required: [title, category, dueDate, priority]
+    GroupAssignment:
+      type: object
+      properties:
+        id:
+          type: integer
+        groupId:
+          type: integer
+        title:
+          type: string
+        category:
+          type: string
+        dueDate:
+          type: string
+          format: date
+        priority:
+          type: string
+          enum: [Low, Medium, High]
+        createdAt:
+          type: string
+          format: date-time
+        studentCount:
+          type: integer
+      required: [id, groupId, title, category, dueDate, priority, createdAt, studentCount]
+    GroupReportEntry:
+      type: object
+      properties:
+        assignmentId:
+          type: integer
+        assignmentTitle:
+          type: string
+        groupId:
+          type: integer
+        dueDate:
+          type: string
+          format: date
+        priority:
+          type: string
+          enum: [Low, Medium, High]
+        userId:
+          type: string
+        studentName:
+          type: string
+        studentEmail:
+          type: string
+          format: email
+        isCompleted:
+          type: boolean
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+        pointsAwarded:
+          type: integer
+      required: [assignmentId, assignmentTitle, groupId, dueDate, priority, userId, studentName, studentEmail, isCompleted, completedAt, pointsAwarded]
+    PointEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        points:
+          type: integer
+        source:
+          type: string
+          enum: [task_completion, completion_reversal, faculty_adjustment]
+        reason:
+          type: string
+        taskId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, points, source, reason, taskId, createdAt]
+    PointsSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/PointEntry"
+      required: [total, entries]
+    PointAwardInput:
+      type: object
+      properties:
+        groupId:
+          type: integer
+          minimum: 1
+        userId:
+          type: string
+          minLength: 1
+        points:
+          type: integer
+          minimum: -1000
+          maximum: 1000
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 300
+      required: [groupId, userId, points, reason]
+    TaskStatusInput:
+      type: object
+      properties:
+        isCompleted:
+          type: boolean
+      required: [isCompleted]
     Task:
       type: object
       properties:
@@ -207,6 +727,13 @@ components:
           enum: [None, Daily, Weekly, Monthly]
         isCompleted:
           type: boolean
+        assignmentId:
+          type: ["integer", "null"]
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+        pointsAwarded:
+          type: integer
         createdAt:
           type: string
           format: date-time
@@ -218,6 +745,9 @@ components:
         - priority
         - recurrence
         - isCompleted
+        - assignmentId
+        - completedAt
+        - pointsAwarded
         - createdAt
     TaskInput:
       type: object

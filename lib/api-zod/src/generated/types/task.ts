@@ -16,5 +16,10 @@ export interface Task {
   priority: TaskPriority;
   recurrence: TaskRecurrence;
   isCompleted: boolean;
+  /** @nullable */
+  assignmentId: number | null;
+  /** @nullable */
+  completedAt: Date | null;
+  pointsAwarded: number;
   createdAt: Date;
 }

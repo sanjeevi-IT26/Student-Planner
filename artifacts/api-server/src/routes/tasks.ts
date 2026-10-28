@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
-import { db, tasksTable } from "@workspace/db";
+import { db, groupAssignmentsTable, pointsLedgerTable, tasksTable } from "@workspace/db";
 import {
   CompleteTaskParams,
   CompleteTaskResponse,
@@ -12,8 +12,12 @@ import {
   UpdateTaskBody,
   UpdateTaskParams,
   UpdateTaskResponse,
+  UpdateTaskStatusBody,
+  UpdateTaskStatusParams,
+  UpdateTaskStatusResponse,
 } from "@workspace/api-zod";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/auth";
+import { calculateCompletionPoints } from "../lib/scoring";
 
 const router: IRouter = Router();
 const taskRouter = router.use(requireAuth);
@@ -32,6 +36,95 @@ function nextDueDate(dateValue: string, recurrence: string): string {
   if (recurrence === "Weekly") date.setUTCDate(date.getUTCDate() + 7);
   if (recurrence === "Monthly") date.setUTCMonth(date.getUTCMonth() + 1);
   return dateOnly(date);
+}
+
+async function updateTaskCompletion(taskId: number, ownerId: string, isCompleted: boolean) {
+  return db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(tasksTable)
+      .where(and(eq(tasksTable.id, taskId), eq(tasksTable.userId, ownerId)))
+      .limit(1);
+    if (!current) return null;
+    if (current.isCompleted === isCompleted) {
+      return { task: current, nextTask: null };
+    }
+
+    const completedAt = isCompleted ? new Date() : null;
+    let pointsAwarded = 0;
+    let groupId: number | null = null;
+    if (current.assignmentId !== null) {
+      const [assignment] = await tx
+        .select()
+        .from(groupAssignmentsTable)
+        .where(eq(groupAssignmentsTable.id, current.assignmentId))
+        .limit(1);
+      groupId = assignment?.groupId ?? null;
+      if (isCompleted) {
+        pointsAwarded = calculateCompletionPoints(current.dueDate, completedAt!);
+      }
+    }
+
+    const [task] = await tx
+      .update(tasksTable)
+      .set({ isCompleted, completedAt, pointsAwarded })
+      .where(
+        and(
+          eq(tasksTable.id, current.id),
+          eq(tasksTable.userId, ownerId),
+          eq(tasksTable.isCompleted, current.isCompleted),
+        ),
+      )
+      .returning();
+    if (!task) {
+      const [latest] = await tx
+        .select()
+        .from(tasksTable)
+        .where(and(eq(tasksTable.id, taskId), eq(tasksTable.userId, ownerId)))
+        .limit(1);
+      return latest ? { task: latest, nextTask: null } : null;
+    }
+
+    if (current.assignmentId !== null && isCompleted) {
+      await tx.insert(pointsLedgerTable).values({
+        userId: ownerId,
+        groupId,
+        taskId: current.id,
+        createdBy: ownerId,
+        points: pointsAwarded,
+        source: "task_completion",
+        reason: "Automatic points for completing an assigned task.",
+      });
+    } else if (current.assignmentId !== null && current.pointsAwarded !== 0) {
+      await tx.insert(pointsLedgerTable).values({
+        userId: ownerId,
+        groupId,
+        taskId: current.id,
+        createdBy: ownerId,
+        points: -current.pointsAwarded,
+        source: "completion_reversal",
+        reason: "Automatic points reversed after marking the task unfinished.",
+      });
+    }
+
+    let nextTask = null;
+    if (isCompleted && current.assignmentId === null && current.recurrence !== "None") {
+      [nextTask] = await tx
+        .insert(tasksTable)
+        .values({
+          userId: ownerId,
+          title: current.title,
+          category: current.category,
+          dueDate: nextDueDate(current.dueDate, current.recurrence),
+          priority: current.priority,
+          recurrence: current.recurrence,
+          isCompleted: false,
+          pointsAwarded: 0,
+        })
+        .returning();
+    }
+    return { task, nextTask };
+  });
 }
 
 taskRouter.get("/tasks", async (req, res): Promise<void> => {
@@ -99,6 +192,19 @@ taskRouter.patch("/tasks/:taskId", async (req, res): Promise<void> => {
     });
     return;
   }
+  const [current] = await db
+    .select()
+    .from(tasksTable)
+    .where(and(eq(tasksTable.id, params.data.taskId), eq(tasksTable.userId, userId(req))))
+    .limit(1);
+  if (!current) {
+    res.status(404).json({ error: "Task not found" });
+    return;
+  }
+  if (current.assignmentId !== null) {
+    res.status(403).json({ error: "Group-assigned tasks cannot be edited by students." });
+    return;
+  }
 
   const updates = {
     ...(parsed.data.title !== undefined ? { title: parsed.data.title.trim() } : {}),
@@ -125,6 +231,19 @@ taskRouter.delete("/tasks/:taskId", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  const [current] = await db
+    .select()
+    .from(tasksTable)
+    .where(and(eq(tasksTable.id, params.data.taskId), eq(tasksTable.userId, userId(req))))
+    .limit(1);
+  if (!current) {
+    res.status(404).json({ error: "Task not found" });
+    return;
+  }
+  if (current.assignmentId !== null) {
+    res.status(403).json({ error: "Group-assigned tasks cannot be deleted by students." });
+    return;
+  }
   const [task] = await db
     .delete(tasksTable)
     .where(and(eq(tasksTable.id, params.data.taskId), eq(tasksTable.userId, userId(req))))
@@ -142,40 +261,38 @@ taskRouter.patch("/tasks/:taskId/complete", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [current] = await db
-    .select()
-    .from(tasksTable)
-    .where(and(eq(tasksTable.id, params.data.taskId), eq(tasksTable.userId, userId(req))));
-  if (!current) {
+  const result = await updateTaskCompletion(params.data.taskId, userId(req), true);
+  if (!result) {
     res.status(404).json({ error: "Task not found" });
     return;
   }
-  if (current.isCompleted) {
-    res.json(CompleteTaskResponse.parse({ task: current, nextTask: null }));
+  res.json(CompleteTaskResponse.parse(result));
+});
+
+taskRouter.patch("/tasks/:taskId/status", async (req, res): Promise<void> => {
+  const params = UpdateTaskStatusParams.safeParse(req.params);
+  const parsed = UpdateTaskStatusBody.safeParse(req.body);
+  if (!params.success || !parsed.success) {
+    res.status(400).json({
+      error: !params.success
+        ? params.error.message
+        : parsed.success
+          ? "Invalid request body"
+          : parsed.error.message,
+    });
     return;
   }
 
-  const [task] = await db
-    .update(tasksTable)
-    .set({ isCompleted: true })
-    .where(and(eq(tasksTable.id, current.id), eq(tasksTable.userId, userId(req))))
-    .returning();
-  let nextTask = null;
-  if (current.recurrence !== "None") {
-    [nextTask] = await db
-      .insert(tasksTable)
-      .values({
-        userId: userId(req),
-        title: current.title,
-        category: current.category,
-        dueDate: nextDueDate(current.dueDate, current.recurrence),
-        priority: current.priority,
-        recurrence: current.recurrence,
-        isCompleted: false,
-      })
-      .returning();
+  const result = await updateTaskCompletion(
+    params.data.taskId,
+    userId(req),
+    parsed.data.isCompleted,
+  );
+  if (!result) {
+    res.status(404).json({ error: "Task not found" });
+    return;
   }
-  res.json(CompleteTaskResponse.parse({ task, nextTask }));
+  res.json(UpdateTaskStatusResponse.parse(result.task));
 });
 
 export default router;

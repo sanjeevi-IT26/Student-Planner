@@ -13,6 +13,205 @@ export interface Error {
   error: string;
 }
 
+export type UserProfileRole = typeof UserProfileRole[keyof typeof UserProfileRole];
+
+
+export const UserProfileRole = {
+  student: 'student',
+  faculty: 'faculty',
+} as const;
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string;
+  role: UserProfileRole;
+}
+
+export interface FacultyInput {
+  email: string;
+}
+
+export interface GroupInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+}
+
+export interface GroupJoinInput {
+  /**
+     * @minLength 4
+     * @maxLength 24
+     */
+  code: string;
+}
+
+export type GroupSummaryAccessRole = typeof GroupSummaryAccessRole[keyof typeof GroupSummaryAccessRole];
+
+
+export const GroupSummaryAccessRole = {
+  faculty: 'faculty',
+  admin: 'admin',
+  member: 'member',
+} as const;
+
+export interface GroupSummary {
+  id: number;
+  name: string;
+  joinCode: string;
+  createdAt: string;
+  memberCount: number;
+  accessRole: GroupSummaryAccessRole;
+}
+
+export type GroupMemberRole = typeof GroupMemberRole[keyof typeof GroupMemberRole];
+
+
+export const GroupMemberRole = {
+  member: 'member',
+  admin: 'admin',
+} as const;
+
+export interface GroupMember {
+  userId: string;
+  email: string;
+  displayName: string;
+  role: GroupMemberRole;
+  joinedAt: string;
+}
+
+export type MemberRoleUpdateRole = typeof MemberRoleUpdateRole[keyof typeof MemberRoleUpdateRole];
+
+
+export const MemberRoleUpdateRole = {
+  member: 'member',
+  admin: 'admin',
+} as const;
+
+export interface MemberRoleUpdate {
+  role: MemberRoleUpdateRole;
+}
+
+export type GroupAssignmentInputPriority = typeof GroupAssignmentInputPriority[keyof typeof GroupAssignmentInputPriority];
+
+
+export const GroupAssignmentInputPriority = {
+  Low: 'Low',
+  Medium: 'Medium',
+  High: 'High',
+} as const;
+
+export interface GroupAssignmentInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  category: string;
+  dueDate: string;
+  priority: GroupAssignmentInputPriority;
+  /**
+     * @maxItems 250
+     * @items.minLength 1
+     */
+  studentIds?: string[];
+}
+
+export type GroupAssignmentPriority = typeof GroupAssignmentPriority[keyof typeof GroupAssignmentPriority];
+
+
+export const GroupAssignmentPriority = {
+  Low: 'Low',
+  Medium: 'Medium',
+  High: 'High',
+} as const;
+
+export interface GroupAssignment {
+  id: number;
+  groupId: number;
+  title: string;
+  category: string;
+  dueDate: string;
+  priority: GroupAssignmentPriority;
+  createdAt: string;
+  studentCount: number;
+}
+
+export type GroupReportEntryPriority = typeof GroupReportEntryPriority[keyof typeof GroupReportEntryPriority];
+
+
+export const GroupReportEntryPriority = {
+  Low: 'Low',
+  Medium: 'Medium',
+  High: 'High',
+} as const;
+
+export interface GroupReportEntry {
+  assignmentId: number;
+  assignmentTitle: string;
+  groupId: number;
+  dueDate: string;
+  priority: GroupReportEntryPriority;
+  userId: string;
+  studentName: string;
+  studentEmail: string;
+  isCompleted: boolean;
+  /** @nullable */
+  completedAt: string | null;
+  pointsAwarded: number;
+}
+
+export type PointEntrySource = typeof PointEntrySource[keyof typeof PointEntrySource];
+
+
+export const PointEntrySource = {
+  task_completion: 'task_completion',
+  completion_reversal: 'completion_reversal',
+  faculty_adjustment: 'faculty_adjustment',
+} as const;
+
+export interface PointEntry {
+  id: number;
+  points: number;
+  source: PointEntrySource;
+  reason: string;
+  /** @nullable */
+  taskId: number | null;
+  createdAt: string;
+}
+
+export interface PointsSummary {
+  total: number;
+  entries: PointEntry[];
+}
+
+export interface PointAwardInput {
+  /** @minimum 1 */
+  groupId: number;
+  /** @minLength 1 */
+  userId: string;
+  /**
+     * @minimum -1000
+     * @maximum 1000
+     */
+  points: number;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  reason: string;
+}
+
+export interface TaskStatusInput {
+  isCompleted: boolean;
+}
+
 export type TaskPriority = typeof TaskPriority[keyof typeof TaskPriority];
 
 
@@ -40,6 +239,11 @@ export interface Task {
   priority: TaskPriority;
   recurrence: TaskRecurrence;
   isCompleted: boolean;
+  /** @nullable */
+  assignmentId: number | null;
+  /** @nullable */
+  completedAt: string | null;
+  pointsAwarded: number;
   createdAt: string;
 }
 
@@ -127,4 +331,9 @@ export type UnauthorizedResponse = Error;
  * Resource not found
  */
 export type NotFoundResponse = Error;
+
+/**
+ * The signed-in user does not have permission
+ */
+export type ForbiddenResponse = Error;
 
