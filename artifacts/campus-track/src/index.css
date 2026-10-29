@@ -140,3 +140,65 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     background: Highlight;
   }
 }
+
+/* The planner's active moment: a useful next action, never a fabricated reward. */
+.next-step-panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 112px;
+  margin-top: 13px;
+  padding: 20px 23px;
+  border: 1px solid #e8dfcf;
+  border-radius: 15px;
+  background: linear-gradient(110deg, #fffdf8 0%, #f8f1e4 100%);
+  box-shadow: 0 8px 24px #5548340b;
+  animation: next-step-arrive .34s ease-out both;
+}
+.next-step-panel::before { position: absolute; inset: 17px auto 17px 0; width: 3px; border-radius: 0 4px 4px 0; background: var(--coral); content: ""; }
+.next-step-mark { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 13px; color: #ae5a43; background: #f7e7dc; }
+.caught-up-mark { color: var(--sage-ink); background: #e5efe3; }
+.next-step-copy { min-width: 0; flex: 1; }
+.next-step-copy .overline { color: var(--coral-deep); font-size: 8px; }
+.next-step-copy h2 { overflow: hidden; margin: 5px 0 4px; font: 400 19px/1.2 var(--font-display); text-overflow: ellipsis; white-space: nowrap; }
+.next-step-copy p { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.next-step-copy p i { width: 3px; height: 3px; border-radius: 50%; background: #a5aea5; }
+.next-step-panel > .btn { flex: 0 0 auto; }
+.next-step-panel > .btn-primary { box-shadow: 0 5px 14px #dc694f24; }
+.next-step-panel .next-step-status { padding: 6px 9px; border-radius: 20px; color: #827359; background: #f1ead9; font-size: 8px; font-weight: 800; }
+.next-step-error { border-color: #efdbd2; background: #fff9f5; }
+.next-step-error .next-step-mark { color: #a45647; }
+.next-step-mutation-error { margin: 7px 0 0; color: #a45647; font-size: 9px; }
+.report-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.report-tools .tabs { flex-wrap: wrap; }
+.report-tools .tab { padding: 8px 10px; }
+.report-filter-status { margin: 0; color: var(--muted); font-size: 8px; text-align: right; }
+.report-assignment { transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.report-assignment:hover { transform: translateY(-1px); border-color: #d9d8c9; box-shadow: 0 7px 20px #514a3610; }
+.report-assignment-head > span { white-space: nowrap; }
+.report-follow-up { color: #9c604b; font-size: 7px; font-weight: 800; }
+.report-filter-empty { display: flex; align-items: center; flex-direction: column; padding: 27px 15px 18px; text-align: center; }
+.report-filter-empty .empty-mark { color: var(--sage-ink); background: #e5efe3; }
+.report-filter-empty > b { margin-top: 10px; font-size: 10px; }
+.report-filter-empty > p { margin: 5px 0 11px; color: var(--muted); font-size: 8px; line-height: 1.55; }
+.report-filter-empty .btn { min-height: 30px; }
+@keyframes next-step-arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 700px) {
+  .next-step-panel { align-items: flex-start; flex-wrap: wrap; gap: 11px; padding: 17px 14px 15px 17px; }
+  .next-step-panel::before { inset-block: 13px; }
+  .next-step-mark { width: 36px; height: 36px; border-radius: 11px; }
+  .next-step-copy { flex-basis: calc(100% - 50px); }
+  .next-step-copy h2 { font-size: 17px; }
+  .next-step-panel > .btn { margin-left: 47px; }
+  .next-step-panel > .next-step-status { margin-left: 47px; }
+  .report-tools { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .report-tools .tabs { width: 100%; }
+  .report-tools .tab { padding-inline: 7px; font-size: 8px; }
+  .report-filter-status { text-align: left; }
+  .report-row { align-items: flex-start; }
+  .report-row > span:last-child { max-width: 95px; text-align: right; line-height: 1.4; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
