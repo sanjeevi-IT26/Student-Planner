@@ -1,1 +1,2 @@
 - [OpenAPI calendar dates](openapi-calendar-dates.md) — date-only task fields need string handling at the client boundary and calendar-safe conversion on the server.
+- [CampusTrack access and points](campus-track-access-points.md) — preserve multi-faculty access, group-code enrollment, student group admins, and the agreed completion scoring tiers.
